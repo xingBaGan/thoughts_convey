@@ -1,24 +1,17 @@
 import path from "node:path"
 
-import { getRendererHandlers, registerIpcMain } from "@egoist/tipc/main"
-import { PushReceiver } from "@eneris/push-receiver"
+import { registerIpcMain } from "@egoist/tipc/main"
 import { APP_PROTOCOL } from "@follow/shared/constants"
-import { env } from "@follow/shared/env"
-import type { MessagingData } from "@follow/shared/hono"
-import { app, nativeTheme, Notification, shell } from "electron"
+import { app, nativeTheme, shell } from "electron"
 import contextMenu from "electron-context-menu"
 
 import { getIconPath } from "./helper"
 import { checkAndCleanCodeCache, clearCacheCronJob } from "./lib/cleaner"
 import { t } from "./lib/i18n"
 import { store } from "./lib/store"
-import { updateNotificationsToken } from "./lib/user"
-import { logger } from "./logger"
 import { registerAppMenu } from "./menu"
-import type { RendererHandlers } from "./renderer-handlers"
 import { initializeSentry } from "./sentry"
 import { router } from "./tipc"
-import { createMainWindow, getMainWindow } from "./window"
 
 if (process.argv.length === 3 && process.argv[2]!.startsWith("follow-dev:")) {
   process.env.NODE_ENV = "development"
@@ -58,7 +51,6 @@ export const initializeAppStage1 = () => {
   // code. You can also put them in separate files and require them here.
 
   registerMenuAndContextMenu()
-  registerPushNotifications()
   clearCacheCronJob()
   checkAndCleanCodeCache()
 }
@@ -132,79 +124,4 @@ export const registerMenuAndContextMenu = () => {
       ]
     },
   })
-}
-
-const registerPushNotifications = async () => {
-  if (!env.VITE_FIREBASE_CONFIG) {
-    return
-  }
-
-  const credentialsKey = "notifications-credentials"
-  const persistentIdsKey = "notifications-persistent-ids"
-  const credentials = store.get(credentialsKey)
-  const persistentIds = store.get(persistentIdsKey)
-
-  updateNotificationsToken()
-
-  const instance = new PushReceiver({
-    debug: true,
-    firebase: JSON.parse(env.VITE_FIREBASE_CONFIG),
-    persistentIds: persistentIds || [],
-    credentials: credentials || null,
-    bundleId: "is.follow",
-    chromeId: "is.follow",
-  })
-  logger.info(
-    `PushReceiver initialized with credentials ${JSON.stringify(credentials)} and firebase config ${env.VITE_FIREBASE_CONFIG}`,
-  )
-
-  instance.onReady(() => {
-    logger.info("PushReceiver ready")
-  })
-
-  instance.onCredentialsChanged(({ newCredentials }) => {
-    logger.info(`PushReceiver credentials changed to ${newCredentials?.fcm?.token}`)
-    updateNotificationsToken(newCredentials)
-  })
-
-  instance.onNotification((notification) => {
-    logger.info(`PushReceiver received notification: ${JSON.stringify(notification.message.data)}`)
-    const data = notification.message.data as MessagingData
-    switch (data.type) {
-      case "new-entry": {
-        const notification = new Notification({
-          title: data.title,
-          body: data.description,
-        })
-        notification.on("click", () => {
-          let mainWindow = getMainWindow()
-          if (!mainWindow) {
-            mainWindow = createMainWindow()
-          }
-          mainWindow.restore()
-          mainWindow.focus()
-          const handlers = getRendererHandlers<RendererHandlers>(mainWindow.webContents)
-          handlers.navigateEntry.send({
-            feedId: data.feedId,
-            entryId: data.entryId,
-            view: Number.parseInt(data.view),
-          })
-        })
-        notification.show()
-        break
-      }
-      default: {
-        break
-      }
-    }
-    store.set(persistentIdsKey, instance.persistentIds)
-  })
-
-  try {
-    await instance.connect()
-  } catch (error) {
-    logger.error(`PushReceiver error: ${error instanceof Error ? error.stack : error}`)
-  }
-
-  logger.info("PushReceiver connected")
 }

@@ -75,7 +75,10 @@ function bootstrap() {
     electronApp.setAppUserModelId(`re.${APP_PROTOCOL}`)
 
     mainWindow = createMainWindow()
-
+    // for dev debug
+    mainWindow.webContents.openDevTools({
+      mode: "detach",
+    })
     // restore cookies
     const cookies = store.get("cookies") as Cookie[]
     if (cookies) {
@@ -175,8 +178,6 @@ function bootstrap() {
       }
       url && handleOpen(url)
     })
-
-    // for dev debug
 
     if (process.env.NODE_ENV === "development") {
       import("electron-devtools-installer").then(
