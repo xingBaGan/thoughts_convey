@@ -1,18 +1,15 @@
-import { useDroppable } from "@dnd-kit/core"
 import { ActionButton } from "@follow/components/ui/button/index.js"
 import { RootPortal } from "@follow/components/ui/portal/index.js"
 import { Routes, views } from "@follow/constants"
 import { useTypeScriptHappyCallback } from "@follow/hooks"
 import { useRegisterGlobalContext } from "@follow/shared/bridge"
-import { stopPropagation } from "@follow/utils/dom"
 import { clamp, cn } from "@follow/utils/utils"
 import { useWheel } from "@use-gesture/react"
 import { AnimatePresence, m } from "framer-motion"
 import { Lethargy } from "lethargy"
 import type { FC, PropsWithChildren } from "react"
-import { startTransition, useCallback, useLayoutEffect, useRef, useState } from "react"
+import { useCallback, useLayoutEffect, useRef, useState } from "react"
 import { isHotkeyPressed, useHotkeys } from "react-hotkeys-hook"
-import { useTranslation } from "react-i18next"
 
 import { useRootContainerElement } from "~/atoms/dom"
 import { useUISettingKey } from "~/atoms/settings/ui"
@@ -22,11 +19,9 @@ import { shortcuts } from "~/constants/shortcuts"
 import { useNavigateEntry } from "~/hooks/biz/useNavigateEntry"
 import { useReduceMotion } from "~/hooks/biz/useReduceMotion"
 import { getRouteParams } from "~/hooks/biz/useRouteParams"
-import { useUnreadByView } from "~/store/unread/hooks"
 
 import { WindowUnderBlur } from "../../components/ui/background"
 import { getSelectedFeedIds, resetSelectedFeedIds, setSelectedFeedIds } from "./atom"
-import { FeedColumnHeader } from "./header"
 import { useShouldFreeUpSpace } from "./hook"
 import { FeedList } from "./list"
 
@@ -94,7 +89,7 @@ export function FeedColumn({ children, className }: PropsWithChildren<{ classNam
     },
   )
 
-  const [useHotkeysSwitch, setUseHotkeysSwitch] = useState<boolean>(false)
+  const [, setUseHotkeysSwitch] = useState<boolean>(false)
   useHotkeys(
     shortcuts.feeds.switchBetweenViews.key,
     (e) => {
@@ -134,7 +129,6 @@ export function FeedColumn({ children, className }: PropsWithChildren<{ classNam
       )}
       onClick={useCallback(() => navigateBackHome(), [navigateBackHome])}
     >
-      <FeedColumnHeader />
       {!feedColumnShow && (
         <RootPortal to={rootContainerElement}>
           <ActionButton
@@ -146,23 +140,6 @@ export function FeedColumn({ children, className }: PropsWithChildren<{ classNam
           </ActionButton>
         </RootPortal>
       )}
-
-      <div
-        className="flex w-full justify-between px-3 text-xl text-theme-vibrancyFg"
-        onClick={stopPropagation}
-      >
-        {views.map((item, index) => (
-          <ViewSwitchButton
-            key={item.name}
-            item={item}
-            index={index}
-            active={active}
-            setActive={setActive}
-            useHotkeysSwitch={useHotkeysSwitch}
-            setUseHotkeysSwitch={setUseHotkeysSwitch}
-          />
-        ))}
-      </div>
       <div
         className={cn("relative flex size-full", !shouldFreeUpSpace && "overflow-hidden")}
         ref={carouselRef}
@@ -188,66 +165,6 @@ export function FeedColumn({ children, className }: PropsWithChildren<{ classNam
 
       {children}
     </WindowUnderBlur>
-  )
-}
-
-const ViewSwitchButton: FC<{
-  item: (typeof views)[number]
-  index: number
-
-  active: number
-  setActive: (next: number | ((prev: number) => number)) => void
-
-  useHotkeysSwitch: boolean
-  setUseHotkeysSwitch: (next: boolean) => void
-}> = ({ item, index, active, setActive, useHotkeysSwitch, setUseHotkeysSwitch }) => {
-  const unreadByView = useUnreadByView()
-  const { t } = useTranslation()
-  const showSidebarUnreadCount = useUISettingKey("sidebarShowUnreadCount")
-
-  const { isOver, setNodeRef } = useDroppable({
-    id: `view-${item.name}`,
-    data: {
-      category: "",
-      view: item.view,
-    },
-  })
-
-  return (
-    <ActionButton
-      ref={setNodeRef}
-      key={item.name}
-      tooltip={t(item.name as any)}
-      shortcut={`${index + 1}`}
-      className={cn(
-        active === index && item.className,
-        "flex h-11 flex-col items-center gap-1 text-xl",
-        ELECTRON ? "hover:!bg-theme-item-hover" : "",
-        active === index && useHotkeysSwitch ? "bg-theme-item-active" : "",
-        isOver && "border-theme-accent-400 bg-theme-accent-400/60",
-      )}
-      onClick={(e) => {
-        startTransition(() => {
-          setActive(index)
-          setUseHotkeysSwitch(false)
-        })
-        e.stopPropagation()
-      }}
-    >
-      {item.icon}
-      {showSidebarUnreadCount ? (
-        <div className="text-[0.625rem] font-medium leading-none">
-          {unreadByView[index]! > 99 ? <span className="-mr-0.5">99+</span> : unreadByView[index]}
-        </div>
-      ) : (
-        <i
-          className={cn(
-            "i-mgc-round-cute-fi text-[0.25rem]",
-            unreadByView[index] ? (active === index ? "opacity-100" : "opacity-60") : "opacity-0",
-          )}
-        />
-      )}
-    </ActionButton>
   )
 }
 

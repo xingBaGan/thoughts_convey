@@ -1,5 +1,4 @@
 // @ts-check
-import path from "node:path"
 
 import { fixupPluginRules } from "@eslint/compat"
 import { defineConfig } from "eslint-config-hyoban"
@@ -55,22 +54,22 @@ export default defineConfig(
       ],
     },
   },
-  {
-    files: ["apps/server/**/*"],
-    settings: {
-      tailwindcss: {
-        config: path.join(import.meta.dirname, "apps/server/tailwind.config.ts"),
-      },
-    },
-  },
-  {
-    files: ["apps/mobile/**/*"],
-    settings: {
-      tailwindcss: {
-        config: path.join(import.meta.dirname, "apps/mobile/tailwind.config.ts"),
-      },
-    },
-  },
+  // {
+  //   files: ["apps/server/**/*"],
+  //   settings: {
+  //     tailwindcss: {
+  //       config: path.join(import.meta.dirname, "apps/server/tailwind.config.ts"),
+  //     },
+  //   },
+  // },
+  // {
+  //   files: ["apps/mobile/**/*"],
+  //   settings: {
+  //     tailwindcss: {
+  //       config: path.join(import.meta.dirname, "apps/mobile/tailwind.config.ts"),
+  //     },
+  //   },
+  // },
   {
     files: ["**/*.tsx"],
     rules: {
